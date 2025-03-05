@@ -23,8 +23,7 @@ router.post("/register", async (req, res) => {
     const emailText = `Hello ${name},\n\nThank you for registering with us. We are excited to have you on board!`;
     const emailHtml = `<h1>Hello ${name}</h1><p>Thank you for registering with us. We are excited to have you on board!</p>`;
 
-    await sendEmail(email, emailSubject, emailText, emailHtml); // Send email
-
+    await sendEmail(email, emailSubject, emailText, emailHtml);
     res.status(201).json({ message: "User registered successfully" });
   } catch (error) {
     res.status(500).json({ message: "Error registering user", error });
@@ -50,6 +49,10 @@ router.post("/login", async (req, res) => {
   } catch (error) {
     res.status(500).json({ message: "Login failed", error });
   }
+});
+
+router.get("/logout", (req, res) => {
+  res.json({ message: "User logged out successfully" });
 });
 
 module.exports = router;
