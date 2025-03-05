@@ -52,37 +52,62 @@ Run the server:
 
 ```bash
 npm start
+```
+
 The API will be live on http://localhost:5000 (or the port you configured).
 
-API Endpoints
-User Authentication
-POST /api/auth/register: Register a new user
-POST /api/auth/login: Login an existing user
-GET /api/auth/logout: Logout the current user
-Products
-GET /api/products: Get all products
-GET /api/products/:id: Get product details by ID
-POST /api/products: Add a new product (Admin only)
-PUT /api/products/:id: Update product details (Admin only)
-DELETE /api/products/:id: Delete a product (Admin only)
-Orders
-POST /api/orders: Create a new order
-GET /api/orders/:id: Get order details by ID
-GET /api/orders/user/:userId: Get all orders for a user
-Cart
-POST /api/cart: Add item to cart
-GET /api/cart: Get the user's cart items
-DELETE /api/cart/:id: Remove an item from the cart
+### API Endpoints
 
-Contact
-Author: Your Name
-Email: youremail@example.com
-Acknowledgements
-Express - The framework used for building the API.
-MongoDB - The NoSQL database used for storage.
-JWT - Authentication using JSON Web Tokens.
+#### **User Authentication**
 
-### Key Sections:
+| Method | Endpoint             | Description             |
+| ------ | -------------------- | ----------------------- |
+| `POST` | `/api/auth/register` | Register a new user     |
+| `POST` | `/api/auth/login`    | Login an existing user  |
+| `GET`  | `/api/auth/logout`   | Logout the current user |
+
+#### **Products**
+
+| Method   | Endpoint            | Description                         |
+| -------- | ------------------- | ----------------------------------- |
+| `GET`    | `/api/products`     | Get all products                    |
+| `GET`    | `/api/products/:id` | Get product details by ID           |
+| `POST`   | `/api/products`     | Add a new product (Admin only)      |
+| `PUT`    | `/api/products/:id` | Update product details (Admin only) |
+| `DELETE` | `/api/products/:id` | Delete a product (Admin only)       |
+
+#### **Orders**
+
+| Method | Endpoint                   | Description               |
+| ------ | -------------------------- | ------------------------- |
+| `POST` | `/api/orders`              | Create a new order        |
+| `GET`  | `/api/orders/:id`          | Get order details by ID   |
+| `GET`  | `/api/orders/user/:userId` | Get all orders for a user |
+
+#### **Cart**
+
+| Method   | Endpoint        | Description                  |
+| -------- | --------------- | ---------------------------- |
+| `POST`   | `/api/cart`     | Add item to cart             |
+| `GET`    | `/api/cart`     | Get the user's cart items    |
+| `DELETE` | `/api/cart/:id` | Remove an item from the cart |
+
+## Contact
+
+- **Author**: [Your Name](https://github.com/yourusername)
+- **Email**: youremail@example.com
+
+---
+
+## Acknowledgements
+
+- **[Express](https://expressjs.com/)**: The framework used for building the API.
+- **[MongoDB](https://www.mongodb.com/)**: The NoSQL database used for storage.
+- **[JWT](https://jwt.io/)**: Authentication using JSON Web Tokens.
+
+---
+
+## Key Sections:
 
 - **Project Title**: Clear, concise description.
 - **Features**: Key functionalities you’ve built into the API.
@@ -93,4 +118,4 @@ JWT - Authentication using JSON Web Tokens.
 - **License**: Open-source license for your project.
 - **Contact**: How people can reach you for questions or contributions.
 - **Acknowledgements**: Credit to any libraries or tools you used.
-```
+
