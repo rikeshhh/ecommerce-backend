@@ -9,7 +9,6 @@ const orderRoutes = require("./routes/orderRoutes");
 const cartRoutes = require("./routes/cartRoutes");
 
 dotenv.config();
-connectDB();
 
 const app = express();
 app.use(cors({ origin: process.env.CLIENT_URL }));
@@ -21,4 +20,12 @@ app.use("/api/orders", orderRoutes);
 app.use("/api/cart", cartRoutes);
 
 const PORT = process.env.PORT || 5001;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+
+connectDB()
+  .then(() => {
+    app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+  })
+  .catch((err) => {
+    console.error("Failed to start server due to MongoDB error:", err);
+    process.exit(1);
+  });
