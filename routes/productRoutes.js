@@ -1,7 +1,7 @@
 const express = require("express");
 const Product = require("../models/Product");
 const authMiddleware = require("../middleware/authMiddleware");
-const { isAdmin } = require("../middleware/adminMiddleware"); // Assuming you have an admin check middleware
+const { isAdmin } = require("../middleware/adminMiddleware"); 
 
 const router = express.Router();
 
