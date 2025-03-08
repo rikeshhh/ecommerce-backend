@@ -31,4 +31,40 @@ router.post("/", authMiddleware, async (req, res) => {
   }
 });
 
+router.get("/", authMiddleware, async (req, res) => {
+  try {
+    const orders = await Order.find({ user: req.user.id }).populate(
+      "products.product"
+    );
+    res.json(orders);
+  } catch (error) {
+    res
+      .status(500)
+      .json({ message: "Error fetching order history", error: error.message });
+  }
+});
+
+router.get("/:orderId", authMiddleware, async (req, res) => {
+  const { orderId } = req.params;
+
+  if (!mongoose.Types.ObjectId.isValid(orderId)) {
+    return res.status(400).json({ message: "Invalid order ID" });
+  }
+
+  try {
+    const order = await Order.findOne({
+      _id: orderId,
+      user: req.user.id,
+    }).populate("products.product");
+    if (!order) {
+      return res.status(404).json({ message: "Order not found" });
+    }
+    res.json(order);
+  } catch (error) {
+    res
+      .status(500)
+      .json({ message: "Error fetching order", error: error.message });
+  }
+});
+
 module.exports = router;
