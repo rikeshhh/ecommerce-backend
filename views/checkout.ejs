@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Checkout</title>
+    <script src="https://js.stripe.com/v3/"></script>
+  </head>
+  <body>
+    <h1>Checkout</h1>
+    <form id="payment-form">
+      <div id="card-element"></div>
+      <button type="submit">Pay $10</button>
+      <div id="error-message"></div>
+    </form>
+
+    <script>
+      const stripe = Stripe("<%= stripePublishableKey %>");
+      const elements = stripe.elements();
+      const card = elements.create("card");
+      card.mount("#card-element");
+
+      const form = document.getElementById("payment-form");
+      form.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        const { paymentMethod, error } = await stripe.createPaymentMethod({
+          type: "card",
+          card: card,
+        });
+
+        if (error) {
+          document.getElementById("error-message").textContent = error.message;
+        } else {
+          const response = await fetch("/api/orders", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              products: [{ product: "your_product_id_here", quantity: 1 }],
+              totalAmount: 10,
+              paymentMethodId: paymentMethod.id,
+            }),
+          });
+          const result = await response.json();
+          console.log(result);
+          if (response.ok) alert("Order placed!");
+          else alert("Error: " + result.message);
+        }
+      });
+    </script>
+  </body>
+</html>

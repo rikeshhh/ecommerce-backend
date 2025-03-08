@@ -11,9 +11,15 @@ const cartRoutes = require("./routes/cartRoutes");
 dotenv.config();
 
 const app = express();
+app.set("view engine", "ejs");
 app.use(cors({ origin: process.env.CLIENT_URL }));
 app.use(express.json());
-app.get("/", (req, res) => res.send("API is running"));
+app.get("/checkout", (req, res) => {
+  res.render("checkout", {
+    stripePublishableKey:
+      "pk_test_51OjwOvGVlCN6HNjt9tyzrSOp9Eyqz1xoRCMz0yGf1Z2DgjXqzMWXEeRIzBzRBuDURBqOk9zjRqvEbQPrKlh53zFP00lxF0fD1o",
+  });
+});
 app.use("/api/auth", authRoutes);
 app.use("/api/products", productRoutes);
 app.use("/api/orders", orderRoutes);

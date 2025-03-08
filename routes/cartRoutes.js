@@ -1,4 +1,3 @@
-// routes/cartRoutes.js
 const express = require("express");
 const Cart = require("../models/Cart");
 const Product = require("../models/Product");
@@ -6,7 +5,6 @@ const authMiddleware = require("../middleware/authMiddleware");
 
 const router = express.Router();
 
-// Add item to cart
 router.post("/", authMiddleware, async (req, res) => {
   const { productId, quantity } = req.body;
 
