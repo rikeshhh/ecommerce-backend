@@ -77,18 +77,39 @@ router.post("/", authMiddleware, async (req, res) => {
 router.get("/", authMiddleware, async (req, res) => {
   try {
     console.log("User ID:", req.user.id, "Is Admin:", req.user.isAdmin);
-    let orders;
+
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+
+    let ordersQuery;
     if (req.user.isAdmin) {
-      orders = await Order.find()
-        .populate("user", "name email")
-        .populate("products.product");
+      ordersQuery = Order.find();
     } else {
-      orders = await Order.find({ user: req.user.id })
-        .populate("user", "name email")
-        .populate("products.product");
+      ordersQuery = Order.find({ user: req.user.id });
     }
-    console.log("Orders found:", orders.length);
-    res.json(orders);
+
+    const totalOrders = await Order.countDocuments(
+      req.user.isAdmin ? {} : { user: req.user.id }
+    );
+
+    const orders = await ordersQuery
+      .skip(skip)
+      .limit(limit)
+      .populate("user", "name email")
+      .populate("products.product");
+
+    console.log("Orders found:", orders.length, "Page:", page, "Limit:", limit);
+
+    const totalPages = Math.ceil(totalOrders / limit);
+
+    res.json({
+      orders,
+      totalOrders,
+      currentPage: page,
+      totalPages,
+      limit,
+    });
   } catch (error) {
     console.error("Error fetching orders:", error);
     res

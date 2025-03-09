@@ -3,6 +3,7 @@ const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const User = require("../models/User");
 const sendEmail = require("../mailer");
+const authMiddleware = require("../middleware/authMiddleware");
 
 const router = express.Router();
 
@@ -48,7 +49,36 @@ router.post("/login", async (req, res) => {
     res.status(500).json({ message: "Login failed", error: error.message });
   }
 });
+router.get("/users", authMiddleware, async (req, res) => {
+  try {
+    if (!req.user.isAdmin) {
+      return res.status(403).json({ message: "Unauthorized" });
+    }
 
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+
+    const totalUsers = await User.countDocuments();
+    const users = await User.find()
+      .skip(skip)
+      .limit(limit)
+      .select("name email isAdmin createdAt");
+
+    res.json({
+      users,
+      totalUsers,
+      currentPage: page,
+      totalPages: Math.ceil(totalUsers / limit),
+      limit,
+    });
+  } catch (error) {
+    console.error("Error fetching users:", error);
+    res
+      .status(500)
+      .json({ message: "Failed to fetch users", error: error.message });
+  }
+});
 router.get("/me", async (req, res) => {
   const token = req.headers.authorization?.split(" ")[1];
   if (!token) {
