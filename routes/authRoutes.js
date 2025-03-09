@@ -8,44 +8,72 @@ const authMiddleware = require("../middleware/authMiddleware");
 const router = express.Router();
 
 router.post("/register", async (req, res) => {
-  const { name, email, password, isAdmin } = req.body;
+  const { name, email, password } = req.body;
+
+  if (!name || !email || !password) {
+    return res.status(400).json({ message: "All fields are required" });
+  }
 
   try {
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      return res.status(400).json({ message: "User already exists" });
+    }
+
     const hashedPassword = await bcrypt.hash(password, 10);
-    const user = new User({ name, email, password: hashedPassword, isAdmin });
+    const user = new User({
+      name,
+      email,
+      password: hashedPassword,
+      isAdmin: false,
+    });
     await user.save();
 
-    const emailSubject = "Welcome to Our Platform!";
-    const emailText = `Hello ${name},\n\nThank you for registering with us. We are excited to have you on board!`;
-    const emailHtml = `<h1>Hello ${name}</h1><p>Thank you for registering with us. We are excited to have you on board!</p>`;
-
-    await sendEmail(email, emailSubject, emailText, emailHtml);
-
-    res.status(201).json({ message: "User registered successfully" });
+    res.status(201).json({ message: "User created" });
   } catch (error) {
     res
       .status(500)
-      .json({ message: "Error registering user", error: error.message });
+      .json({ message: "Registration failed", error: error.message });
   }
 });
-
 router.post("/login", async (req, res) => {
+  console.log("Login Request Body:", req.body);
   const { email, password } = req.body;
+
+  if (!email || !password) {
+    return res.status(400).json({ message: "Email and password are required" });
+  }
 
   try {
     const user = await User.findOne({ email });
-    if (!user || !(await bcrypt.compare(password, user.password))) {
+    if (!user) {
+      return res.status(401).json({ message: "Invalid credentials" });
+    }
+
+    console.log("User from DB:", user);
+
+    if (!user.password) {
+      return res.status(400).json({
+        message: "Account issue: Password not set. Please reset your password.",
+      });
+    }
+
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) {
       return res.status(401).json({ message: "Invalid credentials" });
     }
 
     const token = jwt.sign(
       { id: user._id, isAdmin: user.isAdmin },
       process.env.JWT_SECRET,
-      { expiresIn: "1h" }
+      {
+        expiresIn: "1h",
+      }
     );
 
-    res.json({ token, userId: user._id });
+    res.json({ token });
   } catch (error) {
+    console.error("Login Error:", error);
     res.status(500).json({ message: "Login failed", error: error.message });
   }
 });
