@@ -1,4 +1,5 @@
 const express = require("express");
+const path = require("path");
 const cors = require("cors");
 const dotenv = require("dotenv");
 const connectDB = require("./config/db");
@@ -10,6 +11,8 @@ const cartRoutes = require("./routes/cartRoutes");
 const usersRouter = require("./routes/userRoutes");
 const analyticsRouter = require("./routes/analyticsRoutes");
 const dashboardStatsRouter = require("./routes/dashboardStatRoutes");
+const favoritesRouter = require("./routes/favouriteRoutes");
+
 dotenv.config();
 
 const app = express();
@@ -29,7 +32,9 @@ app.use("/api/orders", orderRoutes);
 app.use("/api/cart", cartRoutes);
 app.use("/api/analytics", analyticsRouter);
 app.use("/api/dashboard-stats", dashboardStatsRouter);
-app.use("/uploads", express.static("uploads"));
+app.use("/uploads", express.static(path.join(__dirname, "uploads")));
+app.use("/api/favorites", favoritesRouter);
+
 const PORT = process.env.PORT || 5001;
 
 connectDB()

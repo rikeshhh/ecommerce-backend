@@ -33,18 +33,20 @@ const upload = multer({
 });
 
 router.get("/", async (req, res) => {
-  const { page = 1, limit = 10, search, category } = req.query;
+  const { page = 1, limit = 10, search, category, from, to } = req.query;
   const query = {};
 
   if (search) {
     query.$or = [
       { _id: { $regex: search, $options: "i" } },
-      { sku: { $regex: search, $options: "i" } },
       { name: { $regex: search, $options: "i" } },
     ];
   }
   if (category) {
     query.category = { $regex: category, $options: "i" };
+  }
+  if (from && to) {
+    query.createdAt = { $gte: new Date(from), $lte: new Date(to) };
   }
 
   try {
@@ -61,10 +63,7 @@ router.get("/", async (req, res) => {
       limit: parseInt(limit),
     });
   } catch (error) {
-    console.error("Error fetching products:", error);
-    res
-      .status(500)
-      .json({ message: "Error fetching products", error: error.message });
+    res.status(500).json({ message: "Error fetching products", error });
   }
 });
 router.get("/:id", async (req, res) => {
@@ -90,12 +89,50 @@ router.get("/:id", async (req, res) => {
 });
 router.post("/", authMiddleware, upload.single("image"), async (req, res) => {
   try {
+    if (req.is("application/json") && Array.isArray(req.body)) {
+      const productsData = req.body;
+
+      const products = productsData.map((product) => {
+        if (
+          !product.name ||
+          !product.price ||
+          !product.stock ||
+          !product.category
+        ) {
+          throw new Error(
+            "Missing required fields: name, price, stock, or category"
+          );
+        }
+        return {
+          name: product.name,
+          description: product.description || null,
+          price: parseFloat(product.price),
+          stock: parseInt(product.stock),
+          category: product.category,
+          image: product.image || null,
+        };
+      });
+
+      const savedProducts = await Product.insertMany(products, {
+        ordered: false,
+      });
+      return res.status(201).json({
+        message: "Products created successfully",
+        products: savedProducts,
+      });
+    }
+
+    // Single: Form data with optional image
     const { name, description, price, stock, category } = req.body;
+    if (!name || !price || !stock || !category) {
+      return res.status(400).json({ message: "Missing required fields" });
+    }
+
     const image = req.file ? `/uploads/${req.file.filename}` : null;
 
     const product = new Product({
       name,
-      description,
+      description: description || null,
       price: parseFloat(price),
       stock: parseInt(stock),
       category,
@@ -105,9 +142,10 @@ router.post("/", authMiddleware, upload.single("image"), async (req, res) => {
     await product.save();
     res.status(201).json({ product });
   } catch (error) {
+    console.error("Create error:", error);
     res
       .status(500)
-      .json({ message: "Error adding product", error: error.message });
+      .json({ message: "Error adding product(s)", error: error.message });
   }
 });
 
