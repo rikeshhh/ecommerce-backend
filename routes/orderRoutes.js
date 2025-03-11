@@ -1,6 +1,8 @@
 const express = require("express");
 const mongoose = require("mongoose");
 const Order = require("../models/Order");
+const User = require("../models/User");
+
 const authMiddleware = require("../middleware/authMiddleware");
 const sendEmail = require("../mailer");
 require("dotenv").config();
@@ -37,7 +39,14 @@ router.post("/", authMiddleware, async (req, res) => {
 });
 router.get("/", authMiddleware, async (req, res) => {
   const { page = 1, limit = 10, search, dateFrom, dateTo, status } = req.query;
+  const userId = req.user.id;
+  const isAdmin = req.user.isAdmin; 
+
   const query = {};
+
+  if (!isAdmin) {
+    query.user = userId;
+  }
 
   if (search) {
     query.$or = [
@@ -56,8 +65,13 @@ router.get("/", authMiddleware, async (req, res) => {
     const orders = await Order.find(query)
       .skip((page - 1) * limit)
       .limit(parseInt(limit))
-      .sort({ createdAt: -1 });
+      .sort({ createdAt: -1 })
+      .populate("products.product", "name price"); 
     const totalOrders = await Order.countDocuments(query);
+    console.log(
+      `Fetched orders for ${isAdmin ? "admin" : "user " + userId}:`,
+      orders.length
+    );
     res.json({
       orders,
       totalOrders,
@@ -66,6 +80,7 @@ router.get("/", authMiddleware, async (req, res) => {
       limit: parseInt(limit),
     });
   } catch (error) {
+    console.error("Error fetching orders:", error);
     res.status(500).json({ message: "Error fetching orders", error });
   }
 });
