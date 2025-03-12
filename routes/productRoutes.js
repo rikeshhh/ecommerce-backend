@@ -33,37 +33,58 @@ const upload = multer({
 });
 
 router.get("/", async (req, res) => {
-  const { page = 1, limit = 10, search, category, from, to } = req.query;
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 10;
+  const { search, category, from, to } = req.query;
+
+  if (isNaN(page) || page < 1)
+    return res.status(400).json({ message: "Invalid page number" });
+  if (isNaN(limit) || limit < 1)
+    return res.status(400).json({ message: "Invalid limit" });
+
   const query = {};
 
-  if (search) {
-    query.$or = [
-      { _id: { $regex: search, $options: "i" } },
-      { name: { $regex: search, $options: "i" } },
-    ];
-  }
-  if (category) {
-    query.category = { $regex: category, $options: "i" };
-  }
-  if (from && to) {
-    query.createdAt = { $gte: new Date(from), $lte: new Date(to) };
-  }
-
   try {
+    if (search) {
+      const searchStr = String(search).trim();
+      query.$or = [{ name: { $regex: searchStr, $options: "i" } }];
+    }
+
+    if (category) {
+      query.category = { $regex: String(category).trim(), $options: "i" };
+    }
+
+    if (from && to) {
+      const fromDate = new Date(from);
+      const toDate = new Date(to);
+      console.log("Received date range:", { from, to, fromDate, toDate });
+      if (isNaN(fromDate.getTime()) || isNaN(toDate.getTime())) {
+        return res.status(400).json({ message: "Invalid date range" });
+      }
+      query.createdAt = { $gte: fromDate, $lte: toDate };
+      console.log("Applying date filter:", query.createdAt);
+    }
+
+    console.log("Final query:", query);
     const products = await Product.find(query)
       .skip((page - 1) * limit)
-      .limit(parseInt(limit))
+      .limit(limit)
       .sort({ createdAt: -1 });
+
     const totalProducts = await Product.countDocuments(query);
+
     res.json({
       products,
       totalProducts,
-      currentPage: parseInt(page),
+      currentPage: page,
       totalPages: Math.ceil(totalProducts / limit),
-      limit: parseInt(limit),
+      limit,
     });
   } catch (error) {
-    res.status(500).json({ message: "Error fetching products", error });
+    console.error("Error fetching products:", error);
+    res
+      .status(500)
+      .json({ message: "Error fetching products", error: error.message });
   }
 });
 router.get("/:id", async (req, res) => {
@@ -122,7 +143,6 @@ router.post("/", authMiddleware, upload.single("image"), async (req, res) => {
       });
     }
 
-    // Single: Form data with optional image
     const { name, description, price, stock, category } = req.body;
     if (!name || !price || !stock || !category) {
       return res.status(400).json({ message: "Missing required fields" });

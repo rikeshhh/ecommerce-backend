@@ -18,7 +18,7 @@ router.post("/", async (req, res) => {
       user = await User.findById(decoded.id);
       if (!user) return res.status(404).json({ message: "User not found" });
     } else if (userId) {
-      user = { _id: userId, favorites: [] }; // Mock user for public
+      user = { _id: userId, favorites: [] }; 
     } else {
       return res.status(400).json({ message: "User ID or token required" });
     }
@@ -50,7 +50,7 @@ router.delete("/:productId", async (req, res) => {
       user = await User.findById(decoded.id);
       if (!user) return res.status(404).json({ message: "User not found" });
     } else if (userId) {
-      user = { _id: userId, favorites: [] }; // Mock user
+      user = { _id: userId, favorites: [] };
     } else {
       return res.status(400).json({ message: "User ID or token required" });
     }

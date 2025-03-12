@@ -1,30 +1,37 @@
 const nodemailer = require("nodemailer");
 
-const transporter = nodemailer.createTransport({
-  service: "Gmail",
-  auth: {
+const getTransporter = () => {
+  console.log("Creating transporter with:", {
     user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
-  },
-});
+    pass: process.env.EMAIL_PASSWORD,
+  });
+  const transporter = nodemailer.createTransport({
+    service: "gmail",
+    auth: {
+      user: process.env.EMAIL_USER,
+      pass: process.env.EMAIL_PASSWORD,
+    },
+  });
+  return transporter;
+};
 
-const sendEmail = async (to, subject, text, html) => {
+const sendEmail = async ({ to, subject, text, html }) => {
+  console.log("sendEmail called with:", { to, subject, text, html });
+  if (!to) {
+    throw new Error("No recipients defined");
+  }
   const mailOptions = {
     from: process.env.EMAIL_USER,
     to,
     subject,
-    text,
-    html,
+    text: text || undefined,
+    html: html || undefined,
   };
-
-  try {
-    const info = await transporter.sendMail(mailOptions);
-    console.log("Email sent: " + info.response);
-    return info;
-  } catch (error) {
-    console.error("Error sending email:", error);
-    throw new Error("Error sending email");
-  }
+  const transporter = getTransporter();
+  console.log("Transporter auth config:", transporter.options.auth);
+  console.log("Mail options sent to Nodemailer:", mailOptions);
+  await transporter.sendMail(mailOptions);
+  console.log("Email sent successfully to:", to);
 };
 
 module.exports = sendEmail;
