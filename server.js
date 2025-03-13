@@ -12,7 +12,7 @@ const usersRouter = require("./routes/userRoutes");
 const analyticsRouter = require("./routes/analyticsRoutes");
 const dashboardStatsRouter = require("./routes/dashboardStatRoutes");
 const favoritesRouter = require("./routes/favouriteRoutes");
-
+const recommendationRoutes = require("./routes/recommendationRoutes");
 dotenv.config();
 
 const app = express();
@@ -35,6 +35,7 @@ app.use("/api/dashboard-stats", dashboardStatsRouter);
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 app.use("/api/favorites", favoritesRouter);
 app.get("/api/test", (req, res) => res.json({ message: "Backend is live" }));
+app.use("/api/recommendations", recommendationRoutes);
 const PORT = process.env.PORT;
 
 connectDB()
