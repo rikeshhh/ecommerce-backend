@@ -34,8 +34,8 @@ app.use("/api/analytics", analyticsRouter);
 app.use("/api/dashboard-stats", dashboardStatsRouter);
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 app.use("/api/favorites", favoritesRouter);
-
-const PORT = process.env.PORT || 5001;
+app.get("/api/test", (req, res) => res.json({ message: "Backend is live" }));
+const PORT = process.env.PORT;
 
 connectDB()
   .then(() => {
