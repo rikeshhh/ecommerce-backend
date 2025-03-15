@@ -4,6 +4,12 @@ const Order = require("../models/Order");
 const User = require("../models/User");
 const authMiddleware = require("../middleware/authMiddleware");
 const sendEmail = require("../mailer");
+const {
+  generateCustomerOrderUpdateEmail,
+} = require("../emails/customerOrderUpdate");
+const {
+  generateAdminOrderNotificationEmail,
+} = require("../emails/adminOrderNotification");
 require("dotenv").config({
   path: require("path").resolve(__dirname, "../../.env"),
 });
@@ -38,53 +44,68 @@ router.post("/", authMiddleware, async (req, res) => {
     await order.save();
 
     const adminEmail = process.env.ADMIN_EMAIL || "admin@example.com";
-    console.log("Attempting to send email to:", adminEmail);
+    console.log("Attempting to send emails to:", {
+      adminEmail,
+      customerEmail: user.email,
+    });
+
+    const populatedOrder = await Order.findById(order._id).populate(
+      "products.product",
+      "name price"
+    );
+    if (!populatedOrder) {
+      console.error("Failed to populate order:", order._id);
+      throw new Error("Failed to populate order details");
+    }
 
     if (!adminEmail || adminEmail === "admin@example.com") {
       console.warn(
-        "Admin email not configured properly; skipping email notification"
+        "Admin email not configured properly; skipping admin email notification"
       );
     } else {
-      const emailSubject = "New Order Placed";
-      const populatedOrder = await Order.findById(order._id).populate(
-        "products.product",
-        "name price"
-      );
-      if (!populatedOrder) {
-        console.error("Failed to populate order:", order._id);
-        throw new Error("Failed to populate order details");
-      }
-
-      const productDetails = populatedOrder.products
-        .map(
-          (p) =>
-            `- ${p.product.name} (Qty: ${p.quantity}, Price: $${p.product.price})`
-        )
-        .join("\n");
-      const emailText = `
-        A new order has been placed by ${user.name}.
-        Order Details:
-        - Order ID: ${order._id}
-        - Total Amount: $${totalAmount}
-        - Products:
-        ${productDetails}
-        - Status: ${order.status}
-        - Payment Status: ${order.paymentStatus}
-        - Date: ${new Date().toLocaleString()}
-      `;
+      const adminEmailSubject = "New Order Placed";
+      const adminEmailHtml = generateAdminOrderNotificationEmail({
+        customerName: user.name,
+        orderId: order._id,
+        totalAmount: order.totalAmount,
+        products: populatedOrder.products,
+        status: order.status,
+        paymentStatus: order.paymentStatus,
+        createdAt: new Date(order.createdAt).toLocaleString(),
+      });
 
       try {
         await sendEmail({
           to: adminEmail,
-          subject: emailSubject,
-          text: emailText,
+          subject: adminEmailSubject,
+          html: adminEmailHtml,
         });
-        console.log(
-          `Email successfully sent to ${adminEmail} for order ${order._id}`
-        );
+        console.log(`Admin email sent to ${adminEmail} for order ${order._id}`);
       } catch (emailError) {
         console.error("Failed to send email to admin:", emailError.message);
       }
+    }
+
+    const customerEmailSubject = `Order Confirmation: ${order._id}`;
+    const customerEmailHtml = generateCustomerOrderUpdateEmail({
+      customerName: user.name,
+      orderId: order._id,
+      newStatus: order.status,
+      updatedAt: new Date(order.createdAt).toLocaleString(),
+      // orderUrl: `http://.com/orders/${order._id}`,
+    });
+
+    try {
+      await sendEmail({
+        to: user.email,
+        subject: customerEmailSubject,
+        html: customerEmailHtml,
+      });
+      console.log(
+        `Customer email sent to ${user.email} for order ${order._id}`
+      );
+    } catch (emailError) {
+      console.error("Failed to send email to customer:", emailError.message);
     }
 
     res.status(201).json(order);

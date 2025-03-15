@@ -4,6 +4,7 @@ const Comment = require("../models/Comment");
 const Order = require("../models/Order");
 const Product = require("../models/Product");
 const authMiddleware = require("../middleware/authMiddleware");
+const { isAdmin } = require("../middleware/adminMiddleware");
 
 router.post("/", authMiddleware, async (req, res) => {
   const { productId, comment, rating } = req.body;
@@ -63,16 +64,23 @@ router.post("/", authMiddleware, async (req, res) => {
 
 router.get("/", async (req, res) => {
   const { productId } = req.query;
+  const isAdminRequest = req.user && req.user.isAdmin;
 
   try {
-    if (!productId) {
-      return res.status(400).json({ message: "Product ID is required" });
+    let query = {};
+    if (productId) {
+      query = { product: productId };
+    }
+    if (!isAdminRequest && productId) {
+      query = { ...query, isVisible: true };
     }
 
-    const comments = await Comment.find({ product: productId })
+    const comments = await Comment.find(query)
       .sort({ createdAt: -1 })
-      .populate("user", "username")
+      .populate("user", "name")
+      .populate("product", "name")
       .lean();
+
     res.json({ comments });
   } catch (error) {
     console.error("Error fetching comments:", error);
@@ -80,4 +88,22 @@ router.get("/", async (req, res) => {
   }
 });
 
+router.patch("/:id/toggle", authMiddleware, isAdmin, async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const comment = await Comment.findById(id);
+    if (!comment) {
+      return res.status(404).json({ message: "Comment not found" });
+    }
+
+    comment.isVisible = !comment.isVisible;
+    await comment.save();
+
+    res.json({ message: "Visibility toggled", comment });
+  } catch (error) {
+    console.error("Error toggling comment visibility:", error);
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+});
 module.exports = router;
