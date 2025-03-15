@@ -17,7 +17,7 @@ router.post("/", authMiddleware, async (req, res) => {
 
   console.log("Environment variables:", {
     EMAIL_USER: process.env.EMAIL_USER,
-    EMAIL_PASSWORD: process.env.EMAIL_PASSWORD ? "[REDACTED]" : undefined,
+    EMAIL_PASS: process.env.EMAIL_PASS ? "[REDACTED]" : undefined,
     ADMIN_EMAIL: process.env.ADMIN_EMAIL,
   });
 
