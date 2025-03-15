@@ -4,33 +4,12 @@ const authMiddleware = require("../middleware/authMiddleware");
 const { isAdmin } = require("../middleware/adminMiddleware");
 const multer = require("multer");
 const path = require("path");
+const { put } = require("@vercel/blob");
 const { default: mongoose } = require("mongoose");
 
 const router = express.Router();
 
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, "uploads/");
-  },
-  filename: (req, file, cb) => {
-    cb(null, Date.now() + path.extname(file.originalname));
-  },
-});
-const upload = multer({
-  storage,
-  fileFilter: (req, file, cb) => {
-    const filetypes = /jpeg|jpg|png|gif/;
-    const extname = filetypes.test(
-      path.extname(file.originalname).toLowerCase()
-    );
-    const mimetype = filetypes.test(file.mimetype);
-    if (extname && mimetype) {
-      return cb(null, true);
-    }
-    cb(new Error("Only images (jpeg, jpg, png, gif) are allowed"));
-  },
-  limits: { fileSize: 5 * 1024 * 1024 },
-});
+const upload = multer({ storage: multer.memoryStorage() });
 
 router.get("/", async (req, res) => {
   const page = parseInt(req.query.page) || 1;
@@ -87,6 +66,7 @@ router.get("/", async (req, res) => {
       .json({ message: "Error fetching products", error: error.message });
   }
 });
+
 router.get("/:id", async (req, res) => {
   const { id } = req.params;
 
@@ -108,6 +88,7 @@ router.get("/:id", async (req, res) => {
       .json({ message: "Error fetching product", error: error.message });
   }
 });
+
 router.post("/", authMiddleware, upload.single("image"), async (req, res) => {
   try {
     if (req.is("application/json") && Array.isArray(req.body)) {
@@ -148,7 +129,14 @@ router.post("/", authMiddleware, upload.single("image"), async (req, res) => {
       return res.status(400).json({ message: "Missing required fields" });
     }
 
-    const image = req.file ? `/uploads/${req.file.filename}` : null;
+    let imageUrl = null;
+    if (req.file) {
+      const blob = await put(req.file.originalname, req.file.buffer, {
+        access: "public",
+        token: process.env.BLOB_READ_WRITE_TOKEN,
+      });
+      imageUrl = blob.url;
+    }
 
     const product = new Product({
       name,
@@ -156,7 +144,7 @@ router.post("/", authMiddleware, upload.single("image"), async (req, res) => {
       price: parseFloat(price),
       stock: parseInt(stock),
       category,
-      image,
+      image: imageUrl,
     });
 
     await product.save();
@@ -176,7 +164,6 @@ router.put(
   upload.single("image"),
   async (req, res) => {
     const { name, description, price, stock, category } = req.body;
-    const image = req.file ? `/uploads/${req.file.filename}` : req.body.image;
 
     try {
       const product = await Product.findById(req.params.id);
@@ -184,11 +171,22 @@ router.put(
         return res.status(404).json({ message: "Product not found" });
       }
 
+      let imageUrl = product.image;
+      if (req.file) {
+        const blob = await put(req.file.originalname, req.file.buffer, {
+          access: "public",
+          token: process.env.BLOB_READ_WRITE_TOKEN,
+        });
+        imageUrl = blob.url;
+      } else if (req.body.image) {
+        imageUrl = req.body.image;
+      }
+
       product.name = name || product.name;
       product.description = description || product.description;
       product.price = price ? parseFloat(price) : product.price;
       product.stock = stock ? parseInt(stock) : product.stock;
-      product.image = image || product.image;
+      product.image = imageUrl;
       product.category = category || product.category;
 
       await product.save();
