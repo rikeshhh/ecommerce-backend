@@ -24,33 +24,30 @@ router.get("/", async (req, res) => {
   const query = {};
 
   try {
-    if (search) {
-      const searchStr = String(search).trim();
-      query.$or = [{ name: { $regex: searchStr, $options: "i" } }];
-    }
-
-    if (category) {
+    if (search)
+      query.$or = [{ name: { $regex: String(search).trim(), $options: "i" } }];
+    if (category)
       query.category = { $regex: String(category).trim(), $options: "i" };
-    }
-
     if (from && to) {
       const fromDate = new Date(from);
       const toDate = new Date(to);
-      console.log("Received date range:", { from, to, fromDate, toDate });
       if (isNaN(fromDate.getTime()) || isNaN(toDate.getTime())) {
         return res.status(400).json({ message: "Invalid date range" });
       }
       query.createdAt = { $gte: fromDate, $lte: toDate };
-      console.log("Applying date filter:", query.createdAt);
     }
 
-    console.log("Final query:", query);
+    console.log("Fetching products with query:", query);
     const products = await Product.find(query)
       .skip((page - 1) * limit)
       .limit(limit)
       .sort({ createdAt: -1 });
 
     const totalProducts = await Product.countDocuments(query);
+
+    if (!products.length) {
+      console.warn("No products found for query:", query);
+    }
 
     res.json({
       products,
@@ -66,20 +63,15 @@ router.get("/", async (req, res) => {
       .json({ message: "Error fetching products", error: error.message });
   }
 });
-
 router.get("/:id", async (req, res) => {
   const { id } = req.params;
-
   if (!mongoose.Types.ObjectId.isValid(id)) {
     return res.status(400).json({ message: "Invalid product ID" });
   }
-
   try {
     const product = await Product.findById(id);
-    if (!product) {
-      return res.status(404).json({ message: "Product not found" });
-    }
-    console.log("Fetched product:", product);
+    if (!product) return res.status(404).json({ message: "Product not found" });
+    console.log("Fetched product by ID:", id);
     res.json({ product });
   } catch (error) {
     console.error("Error fetching product:", error);
@@ -201,5 +193,10 @@ router.put(
     }
   }
 );
-
+router.use((err, req, res, next) => {
+  console.error("Unhandled error:", err);
+  res
+    .status(500)
+    .json({ message: "Internal server error", error: err.message });
+});
 module.exports = router;
