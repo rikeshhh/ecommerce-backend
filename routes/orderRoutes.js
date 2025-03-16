@@ -21,22 +21,28 @@ router.post("/", authMiddleware, async (req, res) => {
   const { products, totalAmount } = req.body;
   const userId = req.user.id;
 
-  console.log("Environment variables:", {
-    EMAIL_USER: process.env.EMAIL_USER,
-    EMAIL_PASS: process.env.EMAIL_PASS ? "[REDACTED]" : undefined,
-    ADMIN_EMAIL: process.env.ADMIN_EMAIL,
-  });
-
   try {
     const user = await User.findById(userId);
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
 
+    const productIds = products.map((p) => p.product);
+    const productDocs = await Product.find({ _id: { $in: productIds } }).select(
+      "name price image"
+    );
+    const productMap = new Map(productDocs.map((p) => [p._id.toString(), p]));
+
+    const enrichedProducts = products.map((p) => ({
+      product: p.product,
+      quantity: p.quantity,
+      image: productMap.get(p.product.toString())?.image || "",
+    }));
+
     const order = new Order({
       user: userId,
       customerName: user.name,
-      products,
+      products: enrichedProducts,
       totalAmount,
       status: "Placed",
       paymentStatus: "Paid",
@@ -44,25 +50,17 @@ router.post("/", authMiddleware, async (req, res) => {
     await order.save();
 
     const adminEmail = process.env.ADMIN_EMAIL || "admin@example.com";
-    console.log("Attempting to send emails to:", {
-      adminEmail,
-      customerEmail: user.email,
-    });
-
     const populatedOrder = await Order.findById(order._id).populate(
       "products.product",
-      "name price"
+      "name price image"
     );
+
     if (!populatedOrder) {
       console.error("Failed to populate order:", order._id);
       throw new Error("Failed to populate order details");
     }
 
-    if (!adminEmail || adminEmail === "admin@example.com") {
-      console.warn(
-        "Admin email not configured properly; skipping admin email notification"
-      );
-    } else {
+    if (adminEmail !== "admin@example.com") {
       const adminEmailSubject = "New Order Placed";
       const adminEmailHtml = generateAdminOrderNotificationEmail({
         customerName: user.name,
@@ -74,16 +72,12 @@ router.post("/", authMiddleware, async (req, res) => {
         createdAt: new Date(order.createdAt).toLocaleString(),
       });
 
-      try {
-        await sendEmail({
-          to: adminEmail,
-          subject: adminEmailSubject,
-          html: adminEmailHtml,
-        });
-        console.log(`Admin email sent to ${adminEmail} for order ${order._id}`);
-      } catch (emailError) {
-        console.error("Failed to send email to admin:", emailError.message);
-      }
+      await sendEmail({
+        to: adminEmail,
+        subject: adminEmailSubject,
+        html: adminEmailHtml,
+      });
+      console.log(`Admin email sent to ${adminEmail} for order ${order._id}`);
     }
 
     const customerEmailSubject = `Order Confirmation: ${order._id}`;
@@ -92,23 +86,16 @@ router.post("/", authMiddleware, async (req, res) => {
       orderId: order._id,
       newStatus: order.status,
       updatedAt: new Date(order.createdAt).toLocaleString(),
-      // orderUrl: `http://.com/orders/${order._id}`,
     });
 
-    try {
-      await sendEmail({
-        to: user.email,
-        subject: customerEmailSubject,
-        html: customerEmailHtml,
-      });
-      console.log(
-        `Customer email sent to ${user.email} for order ${order._id}`
-      );
-    } catch (emailError) {
-      console.error("Failed to send email to customer:", emailError.message);
-    }
+    await sendEmail({
+      to: user.email,
+      subject: customerEmailSubject,
+      html: customerEmailHtml,
+    });
+    console.log(`Customer email sent to ${user.email} for order ${order._id}`);
 
-    res.status(201).json(order);
+    res.status(201).json(populatedOrder);
   } catch (error) {
     console.error("Error creating order:", error.message, error.stack);
     res
@@ -122,11 +109,7 @@ router.get("/", authMiddleware, async (req, res) => {
   const userId = req.user.id;
   const isAdmin = req.user.isAdmin;
 
-  const query = {};
-
-  if (!isAdmin) {
-    query.user = userId;
-  }
+  const query = isAdmin ? {} : { user: userId };
 
   if (search) {
     query.$or = [
@@ -146,8 +129,9 @@ router.get("/", authMiddleware, async (req, res) => {
       .skip((page - 1) * limit)
       .limit(parseInt(limit))
       .sort({ createdAt: -1 })
-      .populate("products.product", "name price");
+      .populate("products.product", "name price image");
     const totalOrders = await Order.countDocuments(query);
+
     console.log(
       `Fetched orders for ${isAdmin ? "admin" : "user " + userId}:`,
       orders.length
@@ -177,11 +161,11 @@ router.get("/:orderId", authMiddleware, async (req, res) => {
     if (req.user.isAdmin) {
       order = await Order.findById(orderId)
         .populate("user", "name email")
-        .populate("products.product");
+        .populate("products.product", "name price image");
     } else {
       order = await Order.findOne({ _id: orderId, user: req.user.id })
         .populate("user", "name email")
-        .populate("products.product");
+        .populate("products.product", "name price image");
     }
 
     if (!order) {
@@ -200,10 +184,11 @@ router.patch("/:id", authMiddleware, async (req, res) => {
   const { id } = req.params;
   const { status, paymentStatus } = req.body;
 
-  console.log("PATCH Request Body:", req.body);
-
   try {
-    const order = await Order.findById(id);
+    const order = await Order.findById(id).populate(
+      "products.product",
+      "name price image"
+    );
     if (!order) {
       return res.status(404).json({ message: "Order not found" });
     }

@@ -13,7 +13,6 @@ const analyticsRouter = require("./routes/analyticsRoutes");
 const dashboardStatsRouter = require("./routes/dashboardStatRoutes");
 const favoritesRouter = require("./routes/favouriteRoutes");
 const commentRoutes = require("./routes/comments");
-const heroRoutes = require("./routes/heroRoutes");
 const recommendationRoutes = require("./routes/recommendationRoutes");
 dotenv.config();
 
@@ -36,7 +35,6 @@ app.use("/api/analytics", analyticsRouter);
 app.use("/api/dashboard-stats", dashboardStatsRouter);
 app.use("/api/favorites", favoritesRouter);
 app.use("/api/comments", commentRoutes);
-app.use("/api/hero", heroRoutes);
 app.get("/api/test", (req, res) => res.json({ message: "Backend is live" }));
 app.use("/api/recommendations", recommendationRoutes);
 const PORT = process.env.PORT;
