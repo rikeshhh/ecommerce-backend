@@ -8,7 +8,8 @@ const authMiddleware = require("../middleware/authMiddleware");
 const router = express.Router();
 
 router.post("/register", async (req, res) => {
-  const { name, email, password } = req.body;
+  const { name, email, password, location } = req.body;
+  console.log("Received in /register:", req.body);
 
   if (!name || !email || !password) {
     return res.status(400).json({ message: "All fields are required" });
@@ -25,6 +26,7 @@ router.post("/register", async (req, res) => {
       name,
       email,
       password: hashedPassword,
+      location,
       isAdmin: false,
     });
     await user.save();
@@ -124,7 +126,38 @@ router.get("/me", async (req, res) => {
     res.status(401).json({ message: "Invalid token" });
   }
 });
+router.put("/me", authMiddleware, async (req, res) => {
+  const { location } = req.body;
+  const userId = req.user.id;
 
+  try {
+    if (
+      !location ||
+      !location.address ||
+      !location.city ||
+      !location.state ||
+      !location.postalCode ||
+      !location.country
+    ) {
+      return res
+        .status(400)
+        .json({ message: "All location fields are required" });
+    }
+
+    const user = await User.findByIdAndUpdate(
+      userId,
+      { location },
+      { new: true, runValidators: true }
+    ).select("-password");
+
+    if (!user) return res.status(404).json({ message: "User not found" });
+    res.json(user);
+  } catch (error) {
+    res
+      .status(500)
+      .json({ message: "Failed to update location", error: error.message });
+  }
+});
 router.get("/logout", (req, res) => {
   res.json({ message: "User logged out successfully" });
 });

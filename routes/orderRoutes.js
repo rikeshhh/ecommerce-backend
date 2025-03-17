@@ -45,7 +45,8 @@ router.post("/", authMiddleware, async (req, res) => {
       customerName: user.name,
       products: enrichedProducts,
       totalAmount,
-      status: "Placed",
+      location: user.location,
+      status: "Processing",
       paymentStatus: "Paid",
     });
     await order.save();
@@ -69,6 +70,7 @@ router.post("/", authMiddleware, async (req, res) => {
         totalAmount: order.totalAmount,
         products: populatedOrder.products,
         status: order.status,
+        location: order.location,
         paymentStatus: order.paymentStatus,
         createdAt: new Date(order.createdAt).toLocaleString(),
       });
@@ -86,6 +88,7 @@ router.post("/", authMiddleware, async (req, res) => {
       customerName: user.name,
       orderId: order._id,
       newStatus: order.status,
+      location: order.location,
       updatedAt: new Date(order.createdAt).toLocaleString(),
     });
 

@@ -2,6 +2,7 @@ const generateCustomerOrderUpdateEmail = ({
   customerName,
   orderId,
   newStatus,
+  location,
   updatedAt,
   orderUrl,
 }) => {
@@ -30,6 +31,20 @@ const generateCustomerOrderUpdateEmail = ({
           <p style="font-size: 16px; color: #333333; margin: 0 0 10px;">
             <strong>New Status:</strong> ${newStatus}
           </p>
+          ${
+            location
+              ? `
+          <p style="font-size: 16px; color: #333333; margin: 0 0 10px;">
+            <strong>Shipping To:</strong>
+          </p>
+          <p style="font-size: 14px; color: #666666; margin: 0 0 10px;">
+            ${location.address}<br>
+            ${location.city}, ${location.state} ${location.postalCode}<br>
+            ${location.country}
+          </p>
+          `
+              : `<p style="font-size: 14px; color: #666666; margin: 0 0 10px;">No shipping location provided.</p>`
+          }
           <p style="font-size: 14px; color: #666666; margin: 0 0 15px;">
             Updated on: ${updatedAt}
           </p>

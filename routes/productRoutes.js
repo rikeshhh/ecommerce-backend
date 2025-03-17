@@ -37,7 +37,6 @@ router.get("/", async (req, res) => {
       query.createdAt = { $gte: fromDate, $lte: toDate };
     }
 
-    console.log("Fetching products with query:", query);
     const products = await Product.find(query)
       .skip((page - 1) * limit)
       .limit(limit)
@@ -71,7 +70,6 @@ router.get("/:id", async (req, res) => {
   try {
     const product = await Product.findById(id);
     if (!product) return res.status(404).json({ message: "Product not found" });
-    console.log("Fetched product by ID:", id);
     res.json({ product });
   } catch (error) {
     console.error("Error fetching product:", error);
@@ -193,10 +191,17 @@ router.put(
     }
   }
 );
+router.delete("/:id", authMiddleware, async (req, res) => {
+  const deletedProduct = await Product.findByIdAndDelete(req.params.id);
+  if (!deletedProduct)
+    return res.status(404).json({ message: "Product not found" });
+  res.status(204).send();
+});
+
 router.use((err, req, res, next) => {
-  console.error("Unhandled error:", err);
   res
     .status(500)
     .json({ message: "Internal server error", error: err.message });
 });
+
 module.exports = router;
