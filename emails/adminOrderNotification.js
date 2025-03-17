@@ -7,7 +7,11 @@ const generateAdminOrderNotificationEmail = ({
   paymentStatus,
   location,
   createdAt,
+  promoCode,
+  discount, 
 }) => {
+  const subtotal = totalAmount + (discount || 0);
+
   return `
     <!DOCTYPE html>
     <html>
@@ -29,6 +33,28 @@ const generateAdminOrderNotificationEmail = ({
               <td style="padding: 8px; border-bottom: 1px solid #e5e7eb;">${orderId}</td>
             </tr>
             <tr>
+              <td style="padding: 8px; border-bottom: 1px solid #e5e7eb;"><strong>Subtotal</strong></td>
+              <td style="padding: 8px; border-bottom: 1px solid #e5e7eb;">$${subtotal.toFixed(
+                2
+              )}</td>
+            </tr>
+            ${
+              promoCode
+                ? `
+            <tr>
+              <td style="padding: 8px; border-bottom: 1px solid #e5e7eb;"><strong>Promo Code</strong></td>
+              <td style="padding: 8px; border-bottom: 1px solid #e5e7eb;">${promoCode}</td>
+            </tr>
+            <tr>
+              <td style="padding: 8px; border-bottom: 1px solid #e5e7eb;"><strong>Discount</strong></td>
+              <td style="padding: 8px; border-bottom: 1px solid #e5e7eb; color: #16a34a;">-$${discount.toFixed(
+                2
+              )}</td>
+            </tr>
+            `
+                : ""
+            }
+            <tr>
               <td style="padding: 8px; border-bottom: 1px solid #e5e7eb;"><strong>Total Amount</strong></td>
               <td style="padding: 8px; border-bottom: 1px solid #e5e7eb;">$${totalAmount.toFixed(
                 2
@@ -47,7 +73,7 @@ const generateAdminOrderNotificationEmail = ({
               <td style="padding: 8px; border-bottom: 1px solid #e5e7eb;">${createdAt}</td>
             </tr>
           </table>
-          <!-- Added Shipping Location Section -->
+          <!-- Shipping Location Section -->
           ${
             location
               ? `

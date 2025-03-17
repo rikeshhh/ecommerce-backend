@@ -3,6 +3,7 @@ const mongoose = require("mongoose");
 const Order = require("../models/Order");
 const Product = require("../models/Product");
 const User = require("../models/User");
+const Promo = require("../models/Promo");
 const authMiddleware = require("../middleware/authMiddleware");
 const sendEmail = require("../mailer");
 const {
@@ -19,7 +20,7 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 const router = express.Router();
 
 router.post("/", authMiddleware, async (req, res) => {
-  const { products, totalAmount } = req.body;
+  const { products, totalAmount, promoCode } = req.body;
   const userId = req.user.id;
 
   try {
@@ -30,7 +31,7 @@ router.post("/", authMiddleware, async (req, res) => {
 
     const productIds = products.map((p) => p.product);
     const productDocs = await Product.find({ _id: { $in: productIds } }).select(
-      "name price image"
+      "name price image category"
     );
     const productMap = new Map(productDocs.map((p) => [p._id.toString(), p]));
 
@@ -40,14 +41,67 @@ router.post("/", authMiddleware, async (req, res) => {
       image: productMap.get(p.product.toString())?.image || "",
     }));
 
+    let finalAmount = totalAmount;
+    let appliedPromo = null;
+
+    if (promoCode) {
+      const promo = await Promo.findOne({
+        code: promoCode,
+        startDate: { $lte: new Date() },
+        endDate: { $gte: new Date() },
+      });
+
+      if (!promo) {
+        return res
+          .status(400)
+          .json({ message: "Invalid or expired promo code" });
+      }
+
+      const applies = promo.productIds
+        ? products.some((p) => promo.productIds.includes(p.product))
+        : promo.category
+        ? products.some(
+            (p) =>
+              productMap.get(p.product.toString())?.category === promo.category
+          )
+        : true;
+
+      if (!applies) {
+        return res
+          .status(400)
+          .json({ message: "Promo code does not apply to your order" });
+      }
+
+      finalAmount = totalAmount * (1 - promo.discount / 100);
+      appliedPromo = promo.code;
+    }
+
+    const paymentIntent = await stripe.paymentIntents.create({
+      amount: Math.round(finalAmount * 100),
+      currency: "usd",
+      payment_method: req.body.paymentMethodId,
+      confirmation_method: "manual",
+      confirm: true,
+      return_url: `${process.env.CLIENT_URL}/order-confirmation`,
+    });
+
+    if (paymentIntent.status === "requires_action") {
+      return res.json({
+        requiresAction: true,
+        clientSecret: paymentIntent.client_secret,
+        paymentIntentId: paymentIntent.id,
+      });
+    }
+
     const order = new Order({
       user: userId,
       customerName: user.name,
       products: enrichedProducts,
-      totalAmount,
+      totalAmount: finalAmount,
       location: user.location,
       status: "Processing",
       paymentStatus: "Paid",
+      promoCode: appliedPromo,
     });
     await order.save();
 
@@ -73,6 +127,8 @@ router.post("/", authMiddleware, async (req, res) => {
         location: order.location,
         paymentStatus: order.paymentStatus,
         createdAt: new Date(order.createdAt).toLocaleString(),
+        promoCode: order.promoCode,
+        discount: promoCode ? totalAmount - finalAmount : 0,
       });
 
       await sendEmail({
@@ -90,6 +146,9 @@ router.post("/", authMiddleware, async (req, res) => {
       newStatus: order.status,
       location: order.location,
       updatedAt: new Date(order.createdAt).toLocaleString(),
+      totalAmount: order.totalAmount,
+      promoCode: order.promoCode,
+      discount: promoCode ? totalAmount - finalAmount : 0,
     });
 
     await sendEmail({

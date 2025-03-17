@@ -27,6 +27,7 @@ const orderSchema = new mongoose.Schema({
     enum: ["Placed", "Processing", "Shipped", "Delivered", "Cancelled"],
     default: "Processing",
   },
+  promoCode: { type: String, default: null },
   paymentStatus: {
     type: String,
     enum: ["Pending", "Paid", "Failed"],
