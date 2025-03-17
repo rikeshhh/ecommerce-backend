@@ -1,6 +1,7 @@
 const express = require("express");
 const mongoose = require("mongoose");
 const Order = require("../models/Order");
+const Product = require("../models/Product");
 const User = require("../models/User");
 const authMiddleware = require("../middleware/authMiddleware");
 const sendEmail = require("../mailer");
