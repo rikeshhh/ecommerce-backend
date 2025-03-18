@@ -4,6 +4,7 @@ const jwt = require("jsonwebtoken");
 const User = require("../models/User");
 const sendEmail = require("../mailer");
 const authMiddleware = require("../middleware/authMiddleware");
+const passport = require("../config/passport");
 
 const router = express.Router();
 
@@ -38,6 +39,7 @@ router.post("/register", async (req, res) => {
       .json({ message: "Registration failed", error: error.message });
   }
 });
+
 router.post("/login", async (req, res) => {
   console.log("Login Request Body:", req.body);
   const { email, password } = req.body;
@@ -56,7 +58,8 @@ router.post("/login", async (req, res) => {
 
     if (!user.password) {
       return res.status(400).json({
-        message: "Account issue: Password not set. Please reset your password.",
+        message:
+          "Account issue: Password not set. Use Google login or reset your password.",
       });
     }
 
@@ -68,9 +71,7 @@ router.post("/login", async (req, res) => {
     const token = jwt.sign(
       { id: user._id, isAdmin: user.isAdmin },
       process.env.JWT_SECRET,
-      {
-        expiresIn: "1h",
-      }
+      { expiresIn: "1h" }
     );
 
     res.json({ token });
@@ -79,6 +80,25 @@ router.post("/login", async (req, res) => {
     res.status(500).json({ message: "Login failed", error: error.message });
   }
 });
+
+router.get(
+  "/google",
+  passport.authenticate("google", { scope: ["profile", "email"] })
+);
+
+router.get(
+  "/google/callback",
+  passport.authenticate("google", { failureRedirect: "/login" }),
+  (req, res) => {
+    const token = jwt.sign(
+      { id: req.user._id, isAdmin: req.user.isAdmin },
+      process.env.JWT_SECRET,
+      { expiresIn: "1h" }
+    );
+    res.redirect(`${process.env.CLIENT_URL}/auth/login?token=${token}`);
+  }
+);
+
 router.get("/users", authMiddleware, async (req, res) => {
   try {
     if (!req.user.isAdmin) {
@@ -109,6 +129,7 @@ router.get("/users", authMiddleware, async (req, res) => {
       .json({ message: "Failed to fetch users", error: error.message });
   }
 });
+
 router.get("/me", async (req, res) => {
   const token = req.headers.authorization?.split(" ")[1];
   if (!token) {
@@ -126,6 +147,7 @@ router.get("/me", async (req, res) => {
     res.status(401).json({ message: "Invalid token" });
   }
 });
+
 router.put("/me", authMiddleware, async (req, res) => {
   const { location } = req.body;
   const userId = req.user.id;
@@ -158,8 +180,11 @@ router.put("/me", authMiddleware, async (req, res) => {
       .json({ message: "Failed to update location", error: error.message });
   }
 });
+
 router.get("/logout", (req, res) => {
-  res.json({ message: "User logged out successfully" });
+  req.logout(() => {
+    res.json({ message: "User logged out successfully" });
+  });
 });
 
 module.exports = router;

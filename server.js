@@ -3,6 +3,8 @@ const path = require("path");
 const cors = require("cors");
 const dotenv = require("dotenv");
 const connectDB = require("./config/db");
+const session = require("express-session");
+const passport = require("./config/passport");
 
 const authRoutes = require("./routes/authRoutes");
 const productRoutes = require("./routes/productRoutes");
@@ -16,12 +18,24 @@ const commentRoutes = require("./routes/comments");
 const promoRoutes = require("./routes/promoRoutes");
 const recommendationRoutes = require("./routes/recommendationRoutes");
 const giveawayRoutes = require("./routes/giveawayRoutes");
+const contactRoutes = require("./routes/contactRoutes");
 dotenv.config();
 
 const app = express();
 app.set("view engine", "ejs");
+
 app.use(cors({ origin: process.env.CLIENT_URL }));
 app.use(express.json());
+app.use(
+  session({
+    secret: process.env.JWT_SECRET,
+    resave: false,
+    saveUninitialized: false,
+  })
+);
+app.use(passport.initialize());
+app.use(passport.session());
+
 app.get("/checkout", (req, res) => {
   res.render("checkout", {
     stripePublishableKey:
@@ -41,8 +55,8 @@ app.get("/api/test", (req, res) => res.json({ message: "Backend is live" }));
 app.use("/api/recommendations", recommendationRoutes);
 app.use("/api/promo", promoRoutes);
 app.use("/api/giveaway", giveawayRoutes);
-const PORT = process.env.PORT;
-
+app.use("/api/contact", contactRoutes);
+const PORT = process.env.PORT || 5001;
 connectDB()
   .then(() => {
     app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

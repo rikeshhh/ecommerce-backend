@@ -94,16 +94,24 @@ trainModel().catch((err) => console.error("Training failed:", err));
 router.get("/", async (req, res) => {
   try {
     const { userId } = req.query;
-    if (!userId) return res.status(400).json({ message: "userId required" });
 
-    if (!model)
-      return res.status(503).json({ message: "Model not ready or no data" });
+    if (!model) {
+      const genericRecommendations = await Product.find()
+        .sort({ createdAt: -1 })
+        .limit(5);
+      return res.json({ recommendations: genericRecommendations });
+    }
 
     const { userMatrix, productMatrix, userIds, productIds } = model;
-    const userIdx = userIds.indexOf(userId.toString());
-    if (userIdx === -1)
-      return res.status(404).json({ message: "User not found in model" });
 
+    if (!userId || userIds.indexOf(userId.toString()) === -1) {
+      const genericRecommendations = await Product.find()
+        .sort({ createdAt: -1 })
+        .limit(5);
+      return res.json({ recommendations: genericRecommendations });
+    }
+
+    const userIdx = userIds.indexOf(userId.toString());
     const userVector = userMatrix.slice([userIdx, 0], [1, -1]);
     const predictions = userVector.matMul(productMatrix.transpose());
     const scores = predictions.dataSync();

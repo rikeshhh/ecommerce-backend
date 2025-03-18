@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Login</title>
+    <link
+      href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css"
+      rel="stylesheet"
+    />
+  </head>
+  <body class="bg-gray-100 flex items-center justify-center h-screen">
+    <div class="max-w-md w-full mx-auto rounded-md p-6 shadow-md bg-white">
+      <h2 class="font-bold text-xl text-neutral-800">Welcome Back</h2>
+      <p class="text-neutral-600 text-sm mt-2">Sign in to your account</p>
+      <form class="my-6" action="/api/auth/login" method="POST">
+        <div class="flex flex-col space-y-2 w-full">
+          <label for="email" class="text-sm font-medium text-gray-700"
+            >Email</label
+          >
+          <input
+            id="email"
+            name="email"
+            type="email"
+            placeholder="you@example.com"
+            class="border p-2 rounded"
+            required
+          />
+        </div>
+        <div class="flex flex-col space-y-2 w-full mt-4">
+          <label for="password" class="text-sm font-medium text-gray-700"
+            >Password</label
+          >
+          <input
+            id="password"
+            name="password"
+            type="password"
+            placeholder="••••••••"
+            class="border p-2 rounded"
+            required
+          />
+        </div>
+        <button
+          type="submit"
+          class="w-full mt-4 bg-black text-white p-2 rounded"
+        >
+          Sign In
+        </button>
+      </form>
+      <div class="border-t border-neutral-300 my-6"></div>
+      <a
+        href="/api/auth/google"
+        class="block w-full text-center bg-white border border-neutral-300 text-black p-2 rounded hover:bg-neutral-100"
+        >Continue with Google</a
+      >
+    </div>
+    <script>
+      const urlParams = new URLSearchParams(window.location.search);
+      const token = urlParams.get("token");
+      if (token) {
+        localStorage.setItem("authToken", token);
+        window.location.href = "/";
+      }
+    </script>
+  </body>
+</html>
