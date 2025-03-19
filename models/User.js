@@ -5,6 +5,7 @@ const userSchema = new mongoose.Schema({
   email: { type: String, required: true, unique: true },
   password: { type: String },
   googleId: { type: String, unique: true, sparse: true },
+  isBanned: { type: Boolean, default: false },
   location: {
     address: { type: String, required: true, default: "Unknown" },
     city: { type: String, required: true, default: "Unknown" },
