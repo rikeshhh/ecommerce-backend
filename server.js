@@ -19,6 +19,7 @@ const promoRoutes = require("./routes/promoRoutes");
 const recommendationRoutes = require("./routes/recommendationRoutes");
 const giveawayRoutes = require("./routes/giveawayRoutes");
 const contactRoutes = require("./routes/contactRoutes");
+const adsRouter = require("./routes/adRoute");
 dotenv.config();
 
 const app = express();
@@ -42,6 +43,7 @@ app.get("/checkout", (req, res) => {
       "pk_test_51OjwOvGVlCN6HNjt9tyzrSOp9Eyqz1xoRCMz0yGf1Z2DgjXqzMWXEeRIzBzRBuDURBqOk9zjRqvEbQPrKlh53zFP00lxF0fD1o",
   });
 });
+app.use("/api/ads", adsRouter);
 app.use("/api/users", usersRouter);
 app.use("/api/auth", authRoutes);
 app.use("/api/products", productRoutes);
